@@ -3,7 +3,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { buildAgentRun, clampPosition, clampRisk, defaultPositionCap, defaultRiskLimit, getDemoSnapshot, getNarratives } from "./marketEngine";
+import { buildAgentRun, buildDebate, clampPosition, clampRisk, defaultPositionCap, defaultRiskLimit, getDemoSnapshot, getNarratives } from "./marketEngine";
 
 export const appRouter = router({
   system: systemRouter,
@@ -21,6 +21,9 @@ export const appRouter = router({
     run: publicProcedure
       .input(z.object({ riskLimit: z.number().optional(), maxPositionPct: z.number().optional(), narrative: z.string().optional() }).optional())
       .mutation(({ input }) => buildAgentRun(clampRisk(input?.riskLimit ?? defaultRiskLimit), clampPosition(input?.maxPositionPct ?? defaultPositionCap), input?.narrative)),
+    debate: publicProcedure
+      .input(z.object({ topic: z.string().optional() }).optional())
+      .mutation(({ input }) => buildDebate(input?.topic)),
     config: publicProcedure.query(() => ({ defaultRiskLimit, defaultPositionCap, maxSources: 20, mode: "paper-only" as const })),
   }),
 });

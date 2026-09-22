@@ -147,3 +147,58 @@ export const demoDisclaimer = "Practice mode only. Synthetic evidence. No wallet
 export const demoConfig = { maxSources: 20, connectors: ["X", "Discord", "Telegram"] };
 export const clampRisk = (value: number) => Math.min(2, Math.max(0.25, value));
 export const clampPosition = (value: number) => Math.min(5, Math.max(0.5, value));
+
+
+export type DebateArgument = {
+  stance: "bull" | "bear";
+  thesis: string;
+  confidence: number;
+  evidenceIds: string[];
+  points: string[];
+};
+
+export type DebateResult = {
+  topic: string;
+  bull: DebateArgument;
+  bear: DebateArgument;
+  judge: { verdict: "bull wins" | "bear wins" | "hold"; confidence: number; rationale: string; ruleTrace: RuleTrace[] };
+};
+
+export function buildDebate(topic = "SOL liquidity rotation"): DebateResult {
+  const relevant = demoEvidence.filter(item => item.narrative === topic);
+  const bullish = relevant.filter(item => item.sentiment === "bullish");
+  const bearRisk = relevant.find(item => item.sourceId === "src-05");
+  const bullConfidence = bullish.length ? Math.round(bullish.reduce((sum, item) => sum + item.conviction, 0) / bullish.length) : 0;
+  const bearConfidence = bearRisk?.conviction ?? 58;
+  const bullScore = Math.round(bullConfidence * 0.55 + Math.min(100, bullish.length * 20) * 0.45);
+  const bearScore = Math.round(bearConfidence * 0.55 + 42 * 0.45);
+  const verdict = bullScore - bearScore >= 12 ? "bull wins" : bearScore - bullScore >= 12 ? "bear wins" : "hold";
+  return {
+    topic,
+    bull: {
+      stance: "bull",
+      thesis: "Spot-led SOL rotation has breadth, not just leverage.",
+      confidence: bullConfidence,
+      evidenceIds: bullish.map(item => item.id),
+      points: ["5 distinct voices align on the same token narrative", "DEX activity is recovering faster than perp open interest", "Wallet accumulation and lower exchange balances support the bid"],
+    },
+    bear: {
+      stance: "bear",
+      thesis: "A crowded high-beta trade can still flush before continuation.",
+      confidence: bearConfidence,
+      evidenceIds: bearRisk ? [bearRisk.id] : [],
+      points: ["Funding can reprice quickly if momentum stalls", "A 6% flush is the stated reset level", "High-beta exposure needs smaller sizing than conviction alone suggests"],
+    },
+    judge: {
+      verdict,
+      confidence: Math.min(96, Math.max(54, Math.round(Math.abs(bullScore - bearScore) + 62))),
+      rationale: verdict === "bull wins" ? "The bull case has broader independent evidence; the bear case changes sizing and invalidation, not the directional verdict." : verdict === "bear wins" ? "The downside case has enough evidence to block a practice position until confirmation improves." : "The arguments are too close; preserve capital and keep the narrative on watch.",
+      ruleTrace: [
+        { rule: "J1 · Shared evidence", result: `${relevant.length} mentions evaluated from the same window`, passed: relevant.length >= 3 },
+        { rule: "J2 · Independent support", result: `${bullish.length} bullish sources vs ${bearRisk ? 1 : 0} explicit risk source`, passed: bullish.length >= 3 },
+        { rule: "J3 · Adversarial risk check", result: "Bear case must state an invalidation or sizing constraint", passed: Boolean(bearRisk) },
+        { rule: "J4 · Decision margin", result: `${Math.abs(bullScore - bearScore)} point spread`, passed: Math.abs(bullScore - bearScore) >= 12 },
+      ],
+    },
+  };
+}

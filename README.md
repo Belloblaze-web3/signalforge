@@ -14,6 +14,10 @@ Most market-intelligence demos stop at sentiment. SignalForge makes the reasonin
 4. **Explain** the verdict, position size, invalidation, and every rule that passed or held.
 5. **Replay** the same evidence through the same policy so a judge can reproduce the result.
 
+### Bull / Bear Debate
+
+The second agent direction is an adversarial debate mode. A bull agent and a bear agent receive the **same evidence window**, must cite the evidence IDs they rely on, and state concrete points rather than generic sentiment. A judge then checks shared-evidence coverage, independent support, whether the bear case contains an invalidation or sizing constraint, and whether the final decision has enough margin. The result is a replayable `bull wins`, `bear wins`, or `hold` verdict that can be compared with the practice-trade gate.
+
 ## Demo
 
 Open the live preview and click **Run agent replay**. Adjust the risk sliders, rerun the policy, inspect the evidence stream, and open the decision trace. The initial replay intentionally produces a SOL liquidity-rotation paper position because five distinct voices converge above the conviction floor.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAgentRun, buildPracticeTrade, scoreNarrative } from "./marketEngine";
+import { buildAgentRun, buildDebate, buildPracticeTrade, scoreNarrative } from "./marketEngine";
 
 describe("SignalForge narrative engine", () => {
   it("promotes a multi-source bullish narrative to a practice buy", () => {
@@ -31,5 +31,17 @@ describe("SignalForge narrative engine", () => {
     const result = buildAgentRun(1.5, 3, "SOL liquidity rotation");
     expect(result.trade?.side).toBe("long");
     expect(result.trade?.rationale).toContain("trusted voices converged");
+  });
+});
+
+
+describe("SignalForge bull / bear debate", () => {
+  it("argues from shared evidence and produces a judge verdict", () => {
+    const result = buildDebate("SOL liquidity rotation");
+    expect(result.bull.evidenceIds.length).toBe(4);
+    expect(result.bear.evidenceIds.length).toBe(1);
+    expect(result.judge.verdict).toBe("bull wins");
+    expect(result.judge.ruleTrace.every(rule => rule.passed)).toBe(true);
+    expect(result.judge.rationale).toContain("broader independent evidence");
   });
 });
