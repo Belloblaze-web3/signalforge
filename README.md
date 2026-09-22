@@ -22,6 +22,10 @@ The second agent direction is an adversarial debate mode. A bull agent and a bea
 
 The third direction scans a candidate universe and makes both sides of the decision legible. The hunter scores liquidity, catalyst support, crowding, and source breadth; it selects a candidate only when it clears the liquidity, catalyst, and crowding rules, then gives every rejected token a concrete reason such as **too crowded** or **liquidity gap**. This prevents a token list from becoming a hype leaderboard and creates a repeatable selection/rejection audit trail.
 
+### Whale Movement Tracker
+
+The fourth direction follows notable wallet flows and connects them to a market verdict. The tracker records asset, direction, amount, venue, wallet label, age, significance, and interpretation for each movement. It then compares net inflows and outflows, requires independent confirmation, and preserves counter-signals instead of treating every exchange outflow as automatically bullish. The result is an accumulation, distribution, or mixed verdict with confidence and a replayable rule trace.
+
 ## Demo
 
 Open the live preview and click **Run agent replay**. Adjust the risk sliders, rerun the policy, inspect the evidence stream, and open the decision trace. The initial replay intentionally produces a SOL liquidity-rotation paper position because five distinct voices converge above the conviction floor.

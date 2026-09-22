@@ -247,3 +247,48 @@ export function buildHunter(): HunterResult {
     ],
   };
 }
+
+
+export type WhaleMovement = {
+  id: string;
+  label: string;
+  wallet: string;
+  asset: string;
+  direction: "inflow" | "outflow";
+  amount: string;
+  usdValue: string;
+  venue: string;
+  age: string;
+  significance: "high" | "medium";
+  interpretation: string;
+};
+
+export type WhaleResult = {
+  window: string;
+  movements: WhaleMovement[];
+  verdict: "accumulation" | "distribution" | "mixed";
+  confidence: number;
+  marketVerdict: string;
+  ruleTrace: RuleTrace[];
+};
+
+export function buildWhaleTracker(): WhaleResult {
+  const movements: WhaleMovement[] = [
+    { id: "whale-01", label: "Smart wallet 7A", wallet: "7A3f…91c2", asset: "SOL", direction: "outflow", amount: "42,800 SOL", usdValue: "$7.97M", venue: "Coinbase → cold wallet", age: "11m", significance: "high", interpretation: "Exchange outflow can reduce immediate sell pressure." },
+    { id: "whale-02", label: "Fund wallet 2C", wallet: "2C18…b8a4", asset: "SOL", direction: "outflow", amount: "18,400 SOL", usdValue: "$3.43M", venue: "Kraken → validator", age: "24m", significance: "high", interpretation: "Second independent outflow confirms accumulation behavior." },
+    { id: "whale-03", label: "Market maker 91", wallet: "91de…4f20", asset: "SOL", direction: "inflow", amount: "9,200 SOL", usdValue: "$1.71M", venue: "Unknown → Binance", age: "38m", significance: "medium", interpretation: "A smaller exchange inflow is the main distribution risk to monitor." },
+  ];
+  return {
+    window: "Last 2 hours · 3 notable movements",
+    movements,
+    verdict: "accumulation",
+    confidence: 82,
+    marketVerdict: "Net exchange outflows outweigh the single inflow; whale behavior supports the SOL rotation thesis, but the Binance deposit remains an explicit risk flag.",
+    ruleTrace: [
+      { rule: "W1 · Notable-flow threshold", result: "3 movements exceed $1M", passed: true },
+      { rule: "W2 · Independent confirmation", result: "2 exchange outflows from separate wallets", passed: true },
+      { rule: "W3 · Net-flow direction", result: "$11.40M out vs $1.71M in", passed: true },
+      { rule: "W4 · Risk disclosure", result: "1 counter-signal preserved in the verdict", passed: true },
+    ],
+  };
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAgentRun, buildDebate, buildHunter, buildPracticeTrade, scoreNarrative } from "./marketEngine";
+import { buildAgentRun, buildDebate, buildHunter, buildPracticeTrade, buildWhaleTracker, scoreNarrative } from "./marketEngine";
 
 describe("SignalForge narrative engine", () => {
   it("promotes a multi-source bullish narrative to a practice buy", () => {
@@ -52,6 +52,17 @@ describe("SignalForge meme / token hunter", () => {
     expect(result.selected.symbol).toBe("BONK");
     expect(result.rejected.map(candidate => candidate.symbol)).toEqual(["WIF", "POPCAT"]);
     expect(result.rejected.every(candidate => candidate.reasons.length > 0)).toBe(true);
+    expect(result.ruleTrace.every(rule => rule.passed)).toBe(true);
+  });
+});
+
+describe("SignalForge whale movement tracker", () => {
+  it("connects net outflows to an accumulation verdict and preserves the counter-signal", () => {
+    const result = buildWhaleTracker();
+    expect(result.verdict).toBe("accumulation");
+    expect(result.movements.filter(movement => movement.direction === "outflow")).toHaveLength(2);
+    expect(result.movements.some(movement => movement.direction === "inflow")).toBe(true);
+    expect(result.marketVerdict).toContain("risk flag");
     expect(result.ruleTrace.every(rule => rule.passed)).toBe(true);
   });
 });

@@ -3,7 +3,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { buildAgentRun, buildDebate, buildHunter, clampPosition, clampRisk, defaultPositionCap, defaultRiskLimit, getDemoSnapshot, getNarratives } from "./marketEngine";
+import { buildAgentRun, buildDebate, buildHunter, buildWhaleTracker, clampPosition, clampRisk, defaultPositionCap, defaultRiskLimit, getDemoSnapshot, getNarratives } from "./marketEngine";
 
 export const appRouter = router({
   system: systemRouter,
@@ -25,6 +25,7 @@ export const appRouter = router({
       .input(z.object({ topic: z.string().optional() }).optional())
       .mutation(({ input }) => buildDebate(input?.topic)),
     hunter: publicProcedure.mutation(() => buildHunter()),
+    whale: publicProcedure.mutation(() => buildWhaleTracker()),
     config: publicProcedure.query(() => ({ defaultRiskLimit, defaultPositionCap, maxSources: 20, mode: "paper-only" as const })),
   }),
 });
