@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAgentRun, buildDebate, buildPracticeTrade, scoreNarrative } from "./marketEngine";
+import { buildAgentRun, buildDebate, buildHunter, buildPracticeTrade, scoreNarrative } from "./marketEngine";
 
 describe("SignalForge narrative engine", () => {
   it("promotes a multi-source bullish narrative to a practice buy", () => {
@@ -43,5 +43,15 @@ describe("SignalForge bull / bear debate", () => {
     expect(result.judge.verdict).toBe("bull wins");
     expect(result.judge.ruleTrace.every(rule => rule.passed)).toBe(true);
     expect(result.judge.rationale).toContain("broader independent evidence");
+  });
+});
+
+describe("SignalForge meme / token hunter", () => {
+  it("selects a liquid candidate and explains every rejection", () => {
+    const result = buildHunter();
+    expect(result.selected.symbol).toBe("BONK");
+    expect(result.rejected.map(candidate => candidate.symbol)).toEqual(["WIF", "POPCAT"]);
+    expect(result.rejected.every(candidate => candidate.reasons.length > 0)).toBe(true);
+    expect(result.ruleTrace.every(rule => rule.passed)).toBe(true);
   });
 });

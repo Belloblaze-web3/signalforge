@@ -202,3 +202,48 @@ export function buildDebate(topic = "SOL liquidity rotation"): DebateResult {
     },
   };
 }
+
+
+export type TokenCandidate = {
+  symbol: string;
+  name: string;
+  narrative: string;
+  liquidityScore: number;
+  catalystScore: number;
+  crowdingScore: number;
+  riskScore: number;
+  sourceCount: number;
+  status: "selected" | "rejected";
+  verdict: string;
+  reasons: string[];
+};
+
+export type HunterResult = {
+  scanId: string;
+  universe: string;
+  candidates: TokenCandidate[];
+  selected: TokenCandidate;
+  rejected: TokenCandidate[];
+  ruleTrace: RuleTrace[];
+};
+
+export function buildHunter(): HunterResult {
+  const candidates: TokenCandidate[] = [
+    { symbol: "BONK", name: "Bonk", narrative: "Solana meme beta", liquidityScore: 88, catalystScore: 84, crowdingScore: 62, riskScore: 68, sourceCount: 4, status: "selected", verdict: "Selected for paper-watch", reasons: ["liquidity clears the 70 floor", "catalyst is supported by 4 sources", "crowding is elevated but not extreme"] },
+    { symbol: "WIF", name: "dogwifhat", narrative: "Solana meme beta", liquidityScore: 76, catalystScore: 71, crowdingScore: 89, riskScore: 42, sourceCount: 3, status: "rejected", verdict: "Rejected: too crowded", reasons: ["crowding score 89 exceeds the 80 ceiling", "risk-adjusted upside is not enough to compensate"] },
+    { symbol: "POPCAT", name: "Popcat", narrative: "meme rotation", liquidityScore: 54, catalystScore: 78, crowdingScore: 48, riskScore: 58, sourceCount: 2, status: "rejected", verdict: "Rejected: liquidity gap", reasons: ["liquidity score 54 is below the 70 floor", "only 2 independent sources support the catalyst"] },
+  ];
+  return {
+    scanId: "hunter-demo-01",
+    universe: "SOL meme universe · 12 candidates scanned",
+    candidates,
+    selected: candidates[0],
+    rejected: candidates.slice(1),
+    ruleTrace: [
+      { rule: "H1 · Liquidity floor", result: "BONK 88 ≥ 70 minimum", passed: true },
+      { rule: "H2 · Catalyst support", result: "4 independent source mentions", passed: true },
+      { rule: "H3 · Crowding ceiling", result: "62 ≤ 80 maximum", passed: true },
+      { rule: "H4 · Rejection transparency", result: "Every rejected candidate has a stated reason", passed: true },
+    ],
+  };
+}
