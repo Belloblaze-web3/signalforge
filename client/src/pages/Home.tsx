@@ -1,33 +1,91 @@
+import { useMemo, useState } from "react";
+import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Streamdown } from 'streamdown';
+import { startLogin } from "@/const";
+import { toast } from "sonner";
+import { Activity, ArrowDownRight, ArrowUpRight, BookOpen, BrainCircuit, ChevronRight, CircleHelp, Clock3, Command, Database, ExternalLink, Gauge, GitBranch, LayoutDashboard, LockKeyhole, Menu, Play, Plus, Radio, Settings2, ShieldCheck, SlidersHorizontal, Sparkles, Target, Users, X, Zap } from "lucide-react";
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Workflow, Frontend Best Practices, Design Guide and Common Pitfalls
- */
+const nav = [
+  { label: "Overview", icon: LayoutDashboard },
+  { label: "Monitoring", icon: Radio },
+  { label: "Practice book", icon: BookOpen },
+  { label: "Method", icon: GitBranch },
+];
+
+const scoreColor = (score: number) => score >= 75 ? "text-accent" : score >= 55 ? "text-amber" : "text-rose";
+
+function MiniBars({ values }: { values: number[] }) {
+  return <div className="mini-bars" aria-label="Signal score trend">{values.map((value, index) => <span key={index} style={{ height: `${value}%` }} className={index === values.length - 1 ? "active" : ""} />)}</div>;
+}
+
+function Sparkline() {
+  return <svg className="sparkline" viewBox="0 0 240 56" role="img" aria-label="Signal score rising from 42 to 82"><path d="M2 46 C25 43, 34 47, 49 38 S76 42, 94 32 S122 34, 138 26 S163 29, 178 19 S210 21, 238 4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" /><path d="M2 46 C25 43, 34 47, 49 38 S76 42, 94 32 S122 34, 138 26 S163 29, 178 19 S210 21, 238 4 L238 56 L2 56 Z" fill="url(#sparkFill)" opacity=".16" /><defs><linearGradient id="sparkFill" x1="0" x2="0" y1="0" y2="1"><stop stopColor="#b7f34a"/><stop offset="1" stopColor="#b7f34a" stopOpacity="0"/></linearGradient></defs></svg>;
+}
+
 export default function Home() {
-  // The useAuth hook provides authentication state.
-  // To implement login/logout, call logout(), or start login from an event
-  // handler: onClick={() => startLogin()} (imported from "@/const"). Never call
-  // startLogin() during render (no href={startLogin()}) — it mints a one-time
-  // nonce cookie and must run only at the moment of navigation.
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
+  const { user } = useAuth();
+  const { data: snapshot, isLoading } = trpc.market.snapshot.useQuery();
+  const { data: narratives } = trpc.market.narratives.useQuery();
+  const runMutation = trpc.market.run.useMutation();
+  const [riskLimit, setRiskLimit] = useState(1.5);
+  const [positionCap, setPositionCap] = useState(3);
+  const [activeNav, setActiveNav] = useState("Overview");
+  const [showTrace, setShowTrace] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [lastRun, setLastRun] = useState<{ score: NonNullable<typeof snapshot>["score"]; trade: any } | null>(null);
 
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
+  const score = lastRun?.score ?? snapshot?.score;
+  const evidence = snapshot?.evidence ?? [];
+  const sources = snapshot?.sources ?? [];
+  const activeSources = sources.filter(source => source.enabled);
+  const currentTrade = lastRun?.trade ?? snapshot?.trades?.[0];
+  const evidenceWithSource = useMemo(() => evidence.map(item => ({ ...item, source: sources.find(source => source.id === item.sourceId) })), [evidence, sources]);
 
-  return (
-    <div className="min-h-screen flex flex-col">
-      <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
-      </main>
-    </div>
-  );
+  const runReplay = () => {
+    runMutation.mutate({ riskLimit, maxPositionPct: positionCap }, {
+      onSuccess: (result) => {
+        setLastRun(result);
+        toast.success(result.trade ? "Replay complete · practice trade recorded" : "Replay complete · no trade passed the gate");
+      },
+      onError: () => toast.error("Replay failed. Try again."),
+    });
+  };
+
+  return <div className="app-shell">
+    <aside className={`sidebar ${mobileOpen ? "open" : ""}`}>
+      <div className="brand"><div className="brand-mark"><span /></div><div><div className="brand-name">SignalForge</div><div className="brand-sub">market intelligence</div></div><button className="icon-button mobile-close" onClick={() => setMobileOpen(false)}><X size={16} /></button></div>
+      <div className="sidebar-kicker">WORKSPACE</div>
+      <nav>{nav.map(item => { const Icon = item.icon; return <button key={item.label} onClick={() => { setActiveNav(item.label); setMobileOpen(false); }} className={`nav-item ${activeNav === item.label ? "active" : ""}`}><Icon size={17} /><span>{item.label}</span>{item.label === "Overview" && <span className="nav-dot" />}</button>; })}</nav>
+      <div className="sidebar-spacer" />
+      <div className="policy-card"><div className="policy-icon"><ShieldCheck size={16} /></div><div><div className="policy-title">Safe mode on</div><div className="policy-copy">No wallets · paper only</div></div></div>
+      <button className="nav-item"><Settings2 size={17} /><span>Settings</span></button>
+      <button className="nav-item"><CircleHelp size={17} /><span>Docs & method</span></button>
+      <div className="sidebar-footer"><div className="avatar">{user?.name?.slice(0, 1).toUpperCase() ?? "S"}</div><div className="user-copy"><strong>{user?.name ?? "Guest operator"}</strong><span>{user ? "authenticated workspace" : "demo workspace"}</span></div><ChevronRight size={15} className="muted" /></div>
+    </aside>
+    {mobileOpen && <button className="scrim" onClick={() => setMobileOpen(false)} aria-label="Close menu" />}
+    <main className="main-content">
+      <header className="topbar"><div className="topbar-left"><button className="icon-button mobile-menu" onClick={() => setMobileOpen(true)}><Menu size={18} /></button><div className="breadcrumb"><span>Workspace</span><ChevronRight size={13} /><strong>{activeNav}</strong></div></div><div className="topbar-right"><div className="live-status"><span className="pulse" /> Agent online</div><div className="topbar-divider" /><button className="icon-button"><Command size={16} /></button><button className="topbar-profile">{user?.name?.slice(0, 1).toUpperCase() ?? "S"}</button></div></header>
+      <div className="content-wrap">
+        <section className="hero-row"><div><div className="eyebrow"><span className="eyebrow-line" /> MULTI-KOL NARRATIVE AGENT <span className="version">v0.3 beta</span></div><h1>Signal desk<span className="period">.</span></h1><p className="hero-copy">Turn noisy social conviction into a decision you can audit.</p></div><div className="hero-actions"><div className="safe-chip"><LockKeyhole size={14} /> SIMULATED EVIDENCE · NO LIVE ORDERS</div><button className="primary-button" onClick={runReplay} disabled={runMutation.isPending}><Play size={15} fill="currentColor" />{runMutation.isPending ? "Running replay…" : "Run agent replay"}</button></div></section>
+        <section className="kpi-grid"><div className="kpi-card"><div className="kpi-label">ACTIVE NARRATIVES <span className="info-dot">i</span></div><div className="kpi-value">03</div><div className="kpi-delta positive"><ArrowUpRight size={13} /> +1 this week</div><MiniBars values={[36, 42, 45, 51, 57, 62, 70, 81]} /></div><div className="kpi-card"><div className="kpi-label">EVIDENCE SCANNED <span className="info-dot">i</span></div><div className="kpi-value">184</div><div className="kpi-delta positive"><ArrowUpRight size={13} /> +28 today</div><div className="kpi-meta"><Database size={13} /> {activeSources.length} sources in window</div></div><div className="kpi-card"><div className="kpi-label">PRACTICE TRADES <span className="info-dot">i</span></div><div className="kpi-value">07</div><div className="kpi-delta positive"><ArrowUpRight size={13} /> +2 today</div><div className="kpi-meta"><BookOpen size={13} /> paper book only</div></div><div className="kpi-card"><div className="kpi-label">AVG CONFIDENCE <span className="info-dot">i</span></div><div className="kpi-value">78<span className="kpi-unit">%</span></div><div className="kpi-delta positive"><ArrowUpRight size={13} /> +6 pts</div><div className="confidence-bar"><span style={{ width: "78%" }} /></div></div></section>
+        <section className="workspace-grid">
+          <div className="main-column">
+            <div className="section-heading"><div><div className="section-kicker"><Radio size={13} /> DETECTED NARRATIVE</div><h2>SOL liquidity rotation</h2></div><div className="section-heading-actions"><span className="status-tag"><span /> NARRATIVE CONFIRMED</span><button className="more-button">•••</button></div></div>
+            <div className="signal-card"><div className="signal-card-top"><div className="token-lockup"><div className="token-icon">◎</div><div><div className="token-name">SOL <span>/ USD</span></div><div className="token-price">$186.40 <span className="price-up">+4.8%</span></div></div></div><div className="signal-score"><div className="score-label">SIGNAL SCORE <span className="info-dot">i</span></div><div className="score-number">{score?.score ?? "—"}<span>/100</span></div></div></div><div className="chart-wrap"><Sparkline /><div className="chart-axis"><span>08:00</span><span>10:00</span><span>12:00</span><span>14:00</span><span>16:00</span><span>18:00</span></div></div><div className="signal-metrics"><div><span>CONVERGENCE</span><strong>{score?.convergence ?? "—"}<small>/100</small></strong><em className="metric-good">5 / 5 voices aligned</em></div><div><span>CONVICTION</span><strong>{score?.conviction ?? "—"}<small>/100</small></strong><em className="metric-good">Above 72 floor</em></div><div><span>URGENCY</span><strong>{score?.urgency ?? "—"}<small>/100</small></strong><em className="metric-neutral">Medium-high window</em></div><div><span>CONFIDENCE</span><strong>{score?.confidence ?? "—"}<small>%</small></strong><em className="metric-good">High quality signal</em></div></div></div>
+            <div className="subsection-heading"><div><span className="section-kicker"><Zap size={13} /> EVIDENCE STREAM</span><span className="subsection-note">last 24 hours · {evidence.length} relevant mentions</span></div><button className="filter-button"><SlidersHorizontal size={14} /> Filter</button></div>
+            <div className="evidence-list">{isLoading ? <div className="loading-state">Loading evidence…</div> : evidenceWithSource.slice(0, 5).map(item => <div className="evidence-row" key={item.id}><div className="source-avatar" style={{ background: item.source?.accent }}>{item.source?.name.slice(0, 1)}</div><div className="evidence-body"><div className="evidence-meta"><strong>{item.source?.name}</strong><span>@{item.source?.handle}</span><span>·</span><span>{item.age}</span><a href={item.url} target="_blank" rel="noreferrer"><ExternalLink size={12} /></a></div><p>{item.excerpt}</p><div className="evidence-tags"><span className="tag token-tag">${item.token}</span><span className={`tag ${item.sentiment === "bullish" ? "bull-tag" : item.sentiment === "bearish" ? "bear-tag" : "neutral-tag"}`}>{item.sentiment}</span><span className="tag">{item.conviction} conviction</span><span className="tag urgency-tag">{item.urgency} urgency</span></div></div><div className="evidence-confidence"><span>TRUST</span><strong>{item.source?.trustScore}</strong></div></div>)}</div>
+            <div className="narrative-row"><div className="subsection-heading"><div><span className="section-kicker"><Activity size={13} /> OTHER NARRATIVES</span><span className="subsection-note">ranked by score</span></div><button className="text-button">View all <ChevronRight size={13} /></button></div><div className="narratives-table">{narratives?.map((item, index) => <div className="narrative-item" key={item.name}><span className="rank">0{index + 1}</span><div className="narrative-token">{item.token}</div><div className="narrative-name"><strong>{item.name}</strong><span>{item.status}</span></div><div className={`narrative-score ${scoreColor(item.score)}`}>{item.score}</div><div className={`narrative-delta ${item.delta.startsWith("+") ? "positive" : "negative"}`}>{item.delta}</div><ChevronRight size={15} className="muted" /></div>)}</div></div>
+          </div>
+          <aside className="right-column">
+            <div className="trace-card"><div className="trace-header"><div><span className="section-kicker"><BrainCircuit size={13} /> DECISION TRACE</span><h3>Why this signal?</h3></div><button className="icon-button" onClick={() => setShowTrace(!showTrace)}>{showTrace ? <X size={15} /> : <ChevronRight size={15} />}</button></div>{showTrace && <><div className="trace-verdict"><div className="verdict-icon"><Target size={17} /></div><div><span>AGENT VERDICT</span><strong>{score?.verdict === "practice buy" ? "Practice buy" : score?.verdict ?? "—"}</strong><em>because separate voices converged</em></div><div className="verdict-confidence">{score?.confidence ?? "—"}%<span>confidence</span></div></div><div className="trace-rules">{score?.ruleTrace.map((rule, index) => <div className="trace-rule" key={rule.rule}><div className={`rule-number ${rule.passed ? "passed" : "failed"}`}>{rule.passed ? "✓" : index + 1}</div><div><strong>{rule.rule}</strong><span>{rule.result}</span></div><span className={`rule-state ${rule.passed ? "passed" : "failed"}`}>{rule.passed ? "PASS" : "HOLD"}</span></div>)}</div><div className="trace-explain"><div className="explain-line"><span className="explain-key">CONTEXT</span><span>{score?.marketContext}</span></div><div className="explain-line"><span className="explain-key">INVALIDATION</span><span className="danger-text">SOL below $176.00</span></div><div className="explain-line"><span className="explain-key">POLICY</span><span>agent policy v0.3</span></div></div></>}</div>
+            <div className="position-card"><div className="card-heading"><div><span className="section-kicker"><BookOpen size={13} /> PRACTICE POSITION</span><h3>{currentTrade ? `${currentTrade.token} · Long` : "No position"}</h3></div><span className="paper-pill">PAPER</span></div>{currentTrade && <><div className="position-price"><span>Entry</span><strong>${currentTrade.entry}</strong><span className="price-up">+4.8%</span></div><div className="position-levels"><div><span>STOP LOSS</span><strong>${currentTrade.stopLoss}</strong></div><div><span>TAKE PROFIT</span><strong>${currentTrade.takeProfit}</strong></div></div><div className="position-size"><span>SIZE</span><strong>{currentTrade.sizePct}%</strong><span>of portfolio · max risk {currentTrade.maxRiskPct}%</span></div><p className="position-rationale">{currentTrade.rationale}</p></>}</div>
+            <div className="config-card"><div className="card-heading"><div><span className="section-kicker"><SlidersHorizontal size={13} /> RISK LIMITS</span><h3>User-defined guardrails</h3></div><button className="more-button">•••</button></div><div className="slider-field"><div><span>Max risk per trade</span><strong>{riskLimit.toFixed(1)}%</strong></div><input type="range" min="0.25" max="2" step="0.25" value={riskLimit} onChange={event => setRiskLimit(Number(event.target.value))} /></div><div className="slider-field"><div><span>Max position size</span><strong>{positionCap.toFixed(1)}%</strong></div><input type="range" min="0.5" max="5" step="0.5" value={positionCap} onChange={event => setPositionCap(Number(event.target.value))} /></div><button className="secondary-button" onClick={() => toast.success("Configuration saved for this demo workspace")}>Save configuration</button><div className="config-foot"><ShieldCheck size={13} /> The gate runs before a position is recorded.</div></div>
+            <div className="source-card"><div className="card-heading"><div><span className="section-kicker"><Users size={13} /> SOURCE ROSTER</span><h3>Trusted voices</h3></div><span className="source-count">{activeSources.length} / 20</span></div><div className="source-list">{sources.slice(0, 5).map(source => <div className="source-line" key={source.id}><span className="source-mini" style={{ background: source.accent }}>{source.name.slice(0, 1)}</span><div><strong>{source.name}</strong><span>@{source.handle} · {source.platform}</span></div><b>{source.trustScore}</b><span className={`source-toggle ${source.enabled ? "on" : ""}`} /></div>)}</div><button className="add-source"><Plus size={14} /> Add source <span>up to 20</span></button></div>
+          </aside>
+        </section>
+        <section className="bottom-strip"><div className="run-log"><div className="strip-heading"><span className="section-kicker"><Clock3 size={13} /> LAST REPLAY</span><span className="run-time">18:12 UTC · Replay #014</span></div><div className="log-lines"><span className="log-ok">●</span><code>ingest</code><span>5 relevant evidence items</span><span className="log-ok">●</span><code>resolve</code><span>5 unique source IDs</span><span className="log-ok">●</span><code>record</code><span>practice trade SOL / long</span></div></div><div className="footer-note"><Sparkles size={14} /> Cause and effect, without the black box.</div></section>
+        <footer className="app-footer"><span>SignalForge · Built for BLI Legal Tech Hackathon 2</span><span>Practice mode only · not investment advice</span><span className="footer-links"><a href="https://github.com" target="_blank" rel="noreferrer">GitHub <ExternalLink size={11} /></a><a href="#method">Method</a></span></footer>
+      </div>
+    </main>
+  </div>;
 }
